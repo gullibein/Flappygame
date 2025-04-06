@@ -1,15 +1,28 @@
-body {
-    display: flex;
-    justify-content: center;
-    align-items: center;
-    min-height: 100vh;
-    background-color: #70c5ce; /* Sky blue background */
+html, body {
     margin: 0;
-    overflow: hidden; /* Hide scrollbars */
+    padding: 0;
+    height: 100%; /* Ensure body takes full height */
+    width: 100%;  /* Ensure body takes full width */
+    overflow: hidden; /* Prevent scrollbars from appearing */
+    background-color: #333; /* Dark background for letter/pillar boxing */
+    display: flex; /* Use flexbox for easy centering */
+    justify-content: center; /* Center horizontally */
+    align-items: center; /* Center vertically */
 }
 
 canvas {
-    border: 1px solid #000;
-    display: block;
-    background-color: #70c5ce; /* Match body or have a distinct game area color */
+    display: block; /* Make it a block element */
+    background-color: #70c5ce; /* Your game's sky color */
+    /* Remove fixed border if you don't want it when scaled */
+    /* border: 1px solid #000; */
+
+    /* Keep pixel art sharp when scaled */
+    image-rendering: -moz-crisp-edges; /* Firefox */
+    image-rendering: -webkit-crisp-edges; /* Chrome/Safari (Old) */
+    image-rendering: pixelated; /* Chrome/Safari/Edge (New standard) */
+    image-rendering: crisp-edges; /* General fallback */
+
+    /* Width and height will be set by JavaScript */
+    /* Do NOT set width/height here in CSS */
+    /* The canvas HTML attributes width="320" height="480" remain for the internal resolution */
 }
