@@ -1,0 +1,15 @@
+body {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    min-height: 100vh;
+    background-color: #70c5ce; /* Sky blue background */
+    margin: 0;
+    overflow: hidden; /* Hide scrollbars */
+}
+
+canvas {
+    border: 1px solid #000;
+    display: block;
+    background-color: #70c5ce; /* Match body or have a distinct game area color */
+}
