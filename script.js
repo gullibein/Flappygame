@@ -74,7 +74,11 @@ const hitSound = new Howl({
 let birdImgLoaded = false, birdImgFlapLoaded = false, pipeTopImgLoaded = false, pipeBottomImgLoaded = false, backgroundImgLoaded = false;
 
 function checkStartGame() {
-    if (backgroundImg.naturalHeight > 0) { // Avoid division by zero
+    if (birdImgLoaded && birdImgFlapLoaded && pipeTopImgLoaded && pipeBottomImgLoaded && backgroundImgLoaded) {
+        console.log("[checkStartGame] All images loaded.");
+
+        // >>> ENSURE THIS CALCULATION IS HERE <<<
+        if (backgroundImg.naturalHeight > 0) { // Avoid division by zero
             const aspectRatio = backgroundImg.naturalWidth / backgroundImg.naturalHeight;
             // Calculate width based on canvas height and image aspect ratio
             bgScaledWidth = canvas.height * aspectRatio;
@@ -100,7 +104,6 @@ function checkStartGame() {
         console.log("[checkStartGame] gameLoop called.");
     }
 }
-
 // --- Image Load Handlers --- (Remain the same)
 birdImg.onload = () => { console.log("Bird image 1 loaded."); birdImgLoaded = true; checkStartGame(); };
 birdImgFlap.onload = () => { console.log("Bird image 2 (flap) loaded."); birdImgFlapLoaded = true; checkStartGame(); };
