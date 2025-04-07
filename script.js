@@ -74,16 +74,19 @@ const hitSound = new Howl({
 let birdImgLoaded = false, birdImgFlapLoaded = false, pipeTopImgLoaded = false, pipeBottomImgLoaded = false, backgroundImgLoaded = false;
 
 function checkStartGame() {
-    // Check remains the same, logic depends only on images
     if (birdImgLoaded && birdImgFlapLoaded && pipeTopImgLoaded && pipeBottomImgLoaded && backgroundImgLoaded) {
-        console.log("All game images loaded successfully!");
-        if (backgroundImg.naturalHeight > 0) {
-            const aspectRatio = backgroundImg.naturalWidth / backgroundImg.naturalHeight;
-            bgScaledWidth = canvas.height * aspectRatio;
-        } else { bgScaledWidth = backgroundImg.naturalWidth || canvas.width; }
+        console.log("[checkStartGame] All images loaded."); // Log entry
+
+        // Calculate Background Scaled Width (Keep this logic)
+        if (backgroundImg.naturalHeight > 0) { /* ... calculation ... */ }
+        else { /* ... fallback ... */ }
         if (bgScaledWidth < canvas.width) { bgScaledWidth = canvas.width; }
+
+        console.log("[checkStartGame] Calling resetGame...");
         resetGame();
-        gameLoop();
+        console.log("[checkStartGame] Calling gameLoop to start...");
+        gameLoop(); // Start the main game loop
+        console.log("[checkStartGame] gameLoop called."); // Confirm call completed
     }
 }
 
@@ -217,7 +220,7 @@ function update() {
 }
 
 function draw() {
-    console.log("Draw function called. Frame:", frame); // Check if draw is called repeatedly
+    console.log("[draw] Entered draw function. Frame:", frame); // Log entry
 
     // --- Draw Background ---
     if (backgroundImg.complete && bgScaledWidth > 0) {
@@ -254,8 +257,12 @@ function draw() {
 
 // The ACTUAL gameLoop function
 function gameLoop() {
+    console.log("[gameLoop] Entered loop."); // Log entry
+    console.log("[gameLoop] Calling update...");
     update();
+    console.log("[gameLoop] Calling draw...");
     draw();
+    console.log("[gameLoop] Requesting next frame...");
     requestAnimationFrame(gameLoop);
 }
 
