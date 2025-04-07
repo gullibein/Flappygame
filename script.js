@@ -216,36 +216,41 @@ function update() {
     frame++;
 }
 
-// The ACTUAL draw function
 function draw() {
+    console.log("Draw function called. Frame:", frame); // Check if draw is called repeatedly
+
     // --- Draw Background ---
     if (backgroundImg.complete && bgScaledWidth > 0) {
-        ctx.drawImage(backgroundImg, bgX, 0, bgScaledWidth, canvas.height);
-        ctx.drawImage(backgroundImg, bgX + bgScaledWidth, 0, bgScaledWidth, canvas.height);
+        console.log(`Drawing background. bgX: ${bgX.toFixed(1)}, bgScaledWidth: ${bgScaledWidth.toFixed(1)}, canvas.height: ${canvas.height}`); // Log parameters
+
+        // Add a try...catch around drawImage just in case
+        try {
+            // Draw the two background images for scrolling
+            ctx.drawImage(backgroundImg, bgX, 0, bgScaledWidth, canvas.height);
+            ctx.drawImage(backgroundImg, bgX + bgScaledWidth, 0, bgScaledWidth, canvas.height);
+            console.log("Background drawImage calls completed."); // Confirm execution
+        } catch (e) {
+            console.error("Error during background drawImage:", e); // Catch specific drawImage errors
+            // Draw fallback color if drawImage fails
+            ctx.fillStyle = "red"; // Draw red if error occurs
+            ctx.fillRect(0, 0, canvas.width, canvas.height);
+        }
+
     } else {
+        console.log("Background image not ready or scaled width is zero. Drawing fallback color."); // Log fallback reason
+        // Fallback background color if image not ready or width invalid
         ctx.fillStyle = "#70c5ce"; // Fallback sky blue
         ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
 
-    // --- Temporarily comment out everything else ---
+    // --- Everything else remains commented out ---
     /*
     // --- Draw Pipes ---
     for (let pipe of pipes) { ... }
-
-    // --- Define which bird image to use ---
-    let currentBirdImage = ... ;
-
-    // --- Draw Bird (with Rotation) ---
-    if (currentBirdImage && currentBirdImage.complete) { ... }
-    else { ... }
-
-    // --- Draw Score ---
-    // ...
-
-    // --- Draw Messages ---
-    // ...
+    // ... etc ...
     */
-}
+
+} // End of draw function
 
 // The ACTUAL gameLoop function
 function gameLoop() {
