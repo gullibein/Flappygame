@@ -112,6 +112,7 @@ function flap() {
         if (gameState === 'start' || gameState === 'gameOver') {
             resetGame();
             gameState = 'playing';
+            console.log(`[flap] State set to: ${gameState}`);
         }
         birdVelY = flapStrength;
         isFlappingAnimation = true;
@@ -140,10 +141,18 @@ function resetGame() {
 
 // The ACTUAL update function where sounds should be played
 function update() {
+    // Log the state right at the beginning of update
+    console.log(`[update] Entered. gameState = ${gameState}, Frame = ${frame}`); // <<< ADD THIS LOG
+
     if (gameState !== 'playing') {
-         if (gameState === 'gameOver' && birdY + birdHeight < canvas.height) { }
+        // If it's not 'playing', log why we are returning
+        console.log(`[update] Returning because gameState is '${gameState}'`); // <<< ADD THIS LOG
+        if (gameState === 'gameOver' && birdY + birdHeight < canvas.height) { }
         return;
     }
+
+    // If we reach here, gameState MUST be 'playing'
+    console.log("[update] gameState IS 'playing'. Proceeding with updates."); // <<< ADD THIS LOG
 
     // Background Scrolling
     if (backgroundImg.complete && bgScaledWidth > 0) {
