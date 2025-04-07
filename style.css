@@ -22,6 +22,8 @@ canvas {
     image-rendering: pixelated; /* Chrome/Safari/Edge (New standard) */
     image-rendering: crisp-edges; /* General fallback */
 
+    visibility: hidden; /* Hide the canvas initially */
+
     /* Width and height will be set by JavaScript */
     /* Do NOT set width/height here in CSS */
     /* The canvas HTML attributes width="320" height="480" remain for the internal resolution */

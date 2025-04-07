@@ -1,7 +1,7 @@
 // script.js - Complete version with Bird Rotation and Sounds
 
 const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d');
+const ctx = canvas.getContext('2d', { alpha: false });
 
 // Game Variables
 // ... (keep existing variables)
@@ -11,6 +11,7 @@ let birdVelY = 0;
 const gravity = 0.25;
 const flapStrength = -5;
 let score = 0;
+let highScore = 0;
 let frame = 0;
 let pipes = [];
 const pipeWidth = 52;
@@ -29,6 +30,8 @@ const rotationLerpFactor = 0.1;
 const birdImg = new Image(); birdImg.src = 'bird.png';
 const birdImgFlap = new Image(); birdImgFlap.src = 'bird2.png';
 let birdWidth = 34; let birdHeight = 24;
+const birdHalfWidth = birdWidth / 2;   // NEW
+const birdHalfHeight = birdHeight / 2; // NEW
 
 // --- Flap Animation State ---
 let isFlappingAnimation = false; let flapAnimationTimer = null;
@@ -149,6 +152,11 @@ function update() {
         if(birdY < 0) birdY = 0;
         if(birdY + birdHeight > canvas.height) birdY = canvas.height - birdHeight;
         gameState = 'gameOver';
+
+ 	if (score > highScore) {
+            highScore = score;
+            console.log("New High Score:", highScore); // Optional: Log to console
+        }
         
  	// Play hit sound // <<< ADD THIS BLOCK vvv
         try {
@@ -179,15 +187,19 @@ function update() {
         if (birdX < pipes[i].x + pipeWidth && birdX + birdWidth > pipes[i].x &&
             (collisionBoxTopY < pipeTopY || birdY + birdHeight > pipeBottomY)) { // Use collisionBoxTopY for top check
             gameState = 'gameOver';
+
+            if (score > highScore) {
+                highScore = score;
+                console.log("New High Score:", highScore); // Optional: Log to console
+            }
              
-	// Play hit sound // <<< ADD THIS BLOCK vvv
+	// Play hit sound
             try {
                 hitSound.currentTime = 0; // Rewind to start
                 hitSound.play();
             } catch (e) {
                 console.warn("Could not play hit sound:", e);
             }
-            // <<< ADD THIS BLOCK ^^^
 
             return;
         }
@@ -218,107 +230,76 @@ function update() {
 
 function draw() {
     // --- Draw Background ---
-    // Clear previous frame / draw background color or image
     if (backgroundImg.complete && bgScaledWidth > 0) {
         ctx.drawImage(backgroundImg, bgX, 0, bgScaledWidth, canvas.height);
         ctx.drawImage(backgroundImg, bgX + bgScaledWidth, 0, bgScaledWidth, canvas.height);
     } else {
-        // Fallback background color if image not ready
-        ctx.fillStyle = "#70c5ce";
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#70c5ce"; ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
 
     // --- Draw Pipes ---
     for (let pipe of pipes) {
-        // Top Pipe
-        if (pipeTopImg.complete) {
-            ctx.drawImage(pipeTopImg, pipe.x, pipe.y - pipeTopImg.height, pipeWidth, pipeTopImg.height);
-        } else { // Fallback
-             ctx.fillStyle = "#006400"; ctx.fillRect(pipe.x, 0, pipeWidth, pipe.y);
-        }
-        // Bottom Pipe
-        if (pipeBottomImg.complete) {
-             ctx.drawImage(pipeBottomImg, pipe.x, pipe.y + pipeGap, pipeWidth, pipeBottomImg.height);
-        } else { // Fallback
-            ctx.fillStyle = "#008000"; ctx.fillRect(pipe.x, pipe.y + pipeGap, pipeWidth, canvas.height - (pipe.y + pipeGap));
-        }
+        if (pipeTopImg.complete) { ctx.drawImage(pipeTopImg, pipe.x, pipe.y - pipeTopImg.height, pipeWidth, pipeTopImg.height); }
+        else { ctx.fillStyle = "#006400"; ctx.fillRect(pipe.x, 0, pipeWidth, pipe.y); }
+        if (pipeBottomImg.complete) { ctx.drawImage(pipeBottomImg, pipe.x, pipe.y + pipeGap, pipeWidth, pipeBottomImg.height); }
+        else { ctx.fillStyle = "#008000"; ctx.fillRect(pipe.x, pipe.y + pipeGap, pipeWidth, canvas.height - (pipe.y + pipeGap)); }
     }
 
-    // --- Define which bird image to use --- // MOVED LOGIC HERE
-    let currentBirdImage = birdImg; // Assume default bird is loaded and ready
-    if (!birdImg.complete && birdImgFlap.complete) {
-        // If default isn't ready but flap is, use flap as fallback
-        currentBirdImage = birdImgFlap;
-    }
-    // Check if flapping animation should show AND if flap image is actually loaded
-    if (isFlappingAnimation && birdImgFlap.complete) {
-        currentBirdImage = birdImgFlap; // Override with flap image
-    }
-    // At this point, currentBirdImage holds the best available image (or null/undefined if none loaded)
+    // --- Define which bird image to use ---
+    let currentBirdImage = birdImg;
+    if (!birdImg.complete && birdImgFlap.complete) { currentBirdImage = birdImgFlap; }
+    if (isFlappingAnimation && birdImgFlap.complete) { currentBirdImage = birdImgFlap; }
 
-
-    // --- Draw Bird (with Rotation) --- // NOW USES DEFINED currentBirdImage
-    // Only draw if we have a valid image reference AND that image is loaded
+    // --- Draw Bird (with Rotation) ---
     if (currentBirdImage && currentBirdImage.complete) {
-        ctx.save(); // Save current state (important before transform)
-        const birdCenterX = birdX + birdWidth / 2;
-        const birdCenterY = birdY + birdHeight / 2;
-        ctx.translate(birdCenterX, birdCenterY); // Move origin to bird center
-        ctx.rotate(birdAngle); // Rotate context
-        // Draw bird centered around the new (0,0) origin
-        ctx.drawImage(currentBirdImage, -birdWidth / 2, -birdHeight / 2, birdWidth, birdHeight);
-        ctx.restore(); // Restore state (undo translate/rotate)
+        ctx.save();
+        const birdCenterX = birdX + birdHalfWidth; const birdCenterY = birdY + birdHalfHeight;
+        ctx.translate(birdCenterX, birdCenterY); ctx.rotate(birdAngle);
+        ctx.drawImage(currentBirdImage, -birdHalfWidth, -birdHalfHeight, birdWidth, birdHeight);
+        ctx.restore();
     } else {
-        // Fallback rectangle if no bird image loaded/ready or currentBirdImage is null
-        ctx.fillStyle = 'yellow';
-        ctx.fillRect(birdX, birdY, birdWidth, birdHeight);
+        ctx.fillStyle = 'yellow'; ctx.fillRect(birdX, birdY, birdWidth, birdHeight);
     }
 
-
-    // --- Draw Score --- (With Yellow/Bold style)
-    ctx.textAlign = "center"; // Center align text
-    ctx.fillStyle = "#FFFF00"; // Yellow color for score
-    ctx.font = "bold 24px Arial"; // Bold, 24px Arial font for score
-    ctx.strokeStyle = "#000000"; // Black outline
-    ctx.lineWidth = 1; // Reset or set outline width (adjust if needed)
-    ctx.fillText(score, canvas.width / 2, 50);
-    ctx.strokeText(score, canvas.width / 2, 50);
+    // --- Draw Score --- (Yellow, New Font)
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#FFFF00"; // Yellow color
+    // MODIFIED: Use Press Start 2P, adjust size, remove bold
+    ctx.font = "16px 'Press Start 2P'"; // Smaller size often looks better for pixel fonts
+    // Removed strokeText
+    ctx.fillText(score, canvas.width / 2, 40); // Adjusted Y position slightly for new font size
 
     // --- Draw Messages ---
     // Keep text centered
     if (gameState === 'start') {
-        // Reset styles for start message
-        ctx.fillStyle = "#FFFFFF"; // White text
-        ctx.font = "20px Arial"; // Normal weight, 20px font
-        ctx.strokeStyle = "#000000"; // Black outline
-        ctx.lineWidth = 1;
-        ctx.fillText("Click or Press Space to Start", canvas.width / 2, canvas.height / 2 - 20);
-        ctx.strokeText("Click or Press Space to Start", canvas.width / 2, canvas.height / 2 - 20);
+        // Style for start message
+        ctx.fillStyle = "#000000"; // Black text
+        // MODIFIED: Use Press Start 2P, adjust size
+        ctx.font = "14px 'Press Start 2P'"; // Slightly smaller for longer text
+        // Removed strokeText
+        ctx.fillText("Ýtið til að byrja", canvas.width / 2, canvas.height / 2 - 20);
 
     } else if (gameState === 'gameOver') {
-        // Style for "Game Over!" text (Red/Bold)
+        // Style for "Game Over!" text (Red, New Font)
         ctx.fillStyle = "#FF0000"; // Red color
-        ctx.font = "bold 30px Arial"; // Bold, 30px font
-        ctx.strokeStyle = "#000000"; // Black outline
-        ctx.lineWidth = 1; // Reset or set outline width (adjust if needed)
-        ctx.fillText("Game Over!", canvas.width / 2, canvas.height / 2 - 30);
-        ctx.strokeText("Game Over!", canvas.width / 2, canvas.height / 2 - 30);
+        // MODIFIED: Use Press Start 2P, adjust size, remove bold
+        ctx.font = "20px 'Press Start 2P'"; // Larger size for title
+         // Removed strokeText
+        ctx.fillText("Búið spil!", canvas.width / 2, canvas.height / 2 - 40); // Adjusted Y
 
-        // Reset styles for score/retry text that follows
-        ctx.fillStyle = "#FFFFFF"; // White text
-        ctx.font = "20px Arial"; // Normal weight, 20px font
-        ctx.strokeStyle = "#000000"; // Black outline
-        ctx.lineWidth = 1;
+        // Reset styles for score/retry text
+        ctx.fillStyle = "#000000"; // Black text
+        // MODIFIED: Use Press Start 2P, adjust size
+        ctx.font = "14px 'Press Start 2P'";
+         // Removed strokeText
+
         // Draw final score
-        ctx.fillText(`Score: ${score}`, canvas.width / 2, canvas.height / 2 + 0);
-        ctx.strokeText(`Score: ${score}`, canvas.width / 2, canvas.height / 2 + 0);
-        // Draw retry text
-        ctx.fillText("Click or Space to Retry", canvas.width / 2, canvas.height / 2 + 30);
-        ctx.strokeText("Click or Space to Retry", canvas.width / 2, canvas.height / 2 + 30);
+        ctx.fillText(score+" stig", canvas.width / 2, canvas.height / 2 + 0); // Adjusted Y
+	ctx.fillText(`Besta tilraun: ${highScore}`, canvas.width / 2, canvas.height / 2 + 25); // Display HS 
     }
 
-    // Reset text alignment if it might affect other potential drawing (good practice)
-    ctx.textAlign = "start"; // Default alignment
+    // Reset text alignment
+    ctx.textAlign = "start";
 
 } // --- End of draw function ---
 
@@ -366,6 +347,8 @@ function resizeGame() {
     // Set the visual size of the canvas element using CSS styles
     canvas.style.width = `${newWidth}px`;
     canvas.style.height = `${newHeight}px`;
+
+    canvas.style.visibility = 'visible';
 
     console.log(`Resized canvas style to: ${newWidth.toFixed(0)} x ${newHeight.toFixed(0)}`);
 }
