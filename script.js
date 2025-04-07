@@ -74,19 +74,30 @@ const hitSound = new Howl({
 let birdImgLoaded = false, birdImgFlapLoaded = false, pipeTopImgLoaded = false, pipeBottomImgLoaded = false, backgroundImgLoaded = false;
 
 function checkStartGame() {
-    if (birdImgLoaded && birdImgFlapLoaded && pipeTopImgLoaded && pipeBottomImgLoaded && backgroundImgLoaded) {
-        console.log("[checkStartGame] All images loaded."); // Log entry
-
-        // Calculate Background Scaled Width (Keep this logic)
-        if (backgroundImg.naturalHeight > 0) { /* ... calculation ... */ }
-        else { /* ... fallback ... */ }
-        if (bgScaledWidth < canvas.width) { bgScaledWidth = canvas.width; }
+    if (backgroundImg.naturalHeight > 0) { // Avoid division by zero
+            const aspectRatio = backgroundImg.naturalWidth / backgroundImg.naturalHeight;
+            // Calculate width based on canvas height and image aspect ratio
+            bgScaledWidth = canvas.height * aspectRatio;
+            console.log(`[checkStartGame] Calculated bgScaledWidth: ${bgScaledWidth.toFixed(0)}px`);
+        } else {
+            // Fallback if image height isn't available (shouldn't happen if loaded)
+            bgScaledWidth = backgroundImg.naturalWidth || canvas.width;
+            console.warn("[checkStartGame] Could not get background naturalHeight, using fallback width.");
+        }
+        // Optional safety check: Ensure it's at least the canvas internal width if calculation fails badly
+        // We might actually want it potentially smaller if the aspect ratio demands it, but wider is typical.
+        // Let's trust the calculation for now unless it yields zero or NaN. Check if bgScaledWidth is valid.
+        if (!(bgScaledWidth > 0)) {
+             console.error("[checkStartGame] Invalid bgScaledWidth calculated, using canvas.width as fallback.");
+             bgScaledWidth = canvas.width; // Fallback to prevent drawing errors
+        }
+       // >>> END OF CALCULATION CHECK <<<
 
         console.log("[checkStartGame] Calling resetGame...");
         resetGame();
         console.log("[checkStartGame] Calling gameLoop to start...");
-        gameLoop(); // Start the main game loop
-        console.log("[checkStartGame] gameLoop called."); // Confirm call completed
+        gameLoop();
+        console.log("[checkStartGame] gameLoop called.");
     }
 }
 
