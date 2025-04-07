@@ -45,9 +45,9 @@ const backgroundImg = new Image(); backgroundImg.src = 'background.png';
 let bgX = 0; const bgScrollSpeed = 0.5; let bgScaledWidth = canvas.width;
 
 // --- Load Sounds ---
-const flapSound = new Audio('flap.wav');
-const scoreSound = new Audio('coingrab.wav');
-const hitSound = new Audio('hit.wav');
+const flapSound = new Audio('flap.mp3');     // CHANGED extension
+const scoreSound = new Audio('coingrab.mp3'); // CHANGED extension
+const hitSound = new Audio('hit.mp3');       // CHANGED extension
 
 // Optional Error Handlers
 flapSound.onerror = () => console.error("Failed to load flap.wav");
