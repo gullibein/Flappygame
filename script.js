@@ -74,36 +74,49 @@ const hitSound = new Howl({
 let birdImgLoaded = false, birdImgFlapLoaded = false, pipeTopImgLoaded = false, pipeBottomImgLoaded = false, backgroundImgLoaded = false;
 
 function checkStartGame() {
+    // Check if all required images have attempted loading (either success or error)
     if (birdImgLoaded && birdImgFlapLoaded && pipeTopImgLoaded && pipeBottomImgLoaded && backgroundImgLoaded) {
-        console.log("[checkStartGame] All images loaded.");
+        // This log confirms the condition was met
+        console.log("[checkStartGame] All assets reported loaded (or errored).");
 
-        // >>> ENSURE THIS CALCULATION IS HERE <<<
-        if (backgroundImg.naturalHeight > 0) { // Avoid division by zero
+        // --- Calculate Background Scaled Width ---
+        // Make sure backgroundImg is valid and has dimensions
+        if (backgroundImg && backgroundImg.complete && backgroundImg.naturalHeight > 0) {
             const aspectRatio = backgroundImg.naturalWidth / backgroundImg.naturalHeight;
-            // Calculate width based on canvas height and image aspect ratio
+            // Calculate width needed to maintain aspect ratio when height matches canvas internal height
             bgScaledWidth = canvas.height * aspectRatio;
-            console.log(`[checkStartGame] Calculated bgScaledWidth: ${bgScaledWidth.toFixed(0)}px`);
+            console.log(`[checkStartGame] Calculated bgScaledWidth: ${bgScaledWidth.toFixed(0)}px based on aspect ratio.`);
         } else {
-            // Fallback if image height isn't available (shouldn't happen if loaded)
-            bgScaledWidth = backgroundImg.naturalWidth || canvas.width;
-            console.warn("[checkStartGame] Could not get background naturalHeight, using fallback width.");
+            // Fallback if image isn't ready or has no height (use internal canvas width)
+            bgScaledWidth = canvas.width; // Default to internal game width
+            console.warn("[checkStartGame] Background image not ready or invalid for aspect ratio calculation, using canvas width as bgScaledWidth.");
         }
-        // Optional safety check: Ensure it's at least the canvas internal width if calculation fails badly
-        // We might actually want it potentially smaller if the aspect ratio demands it, but wider is typical.
-        // Let's trust the calculation for now unless it yields zero or NaN. Check if bgScaledWidth is valid.
-        if (!(bgScaledWidth > 0)) {
-             console.error("[checkStartGame] Invalid bgScaledWidth calculated, using canvas.width as fallback.");
-             bgScaledWidth = canvas.width; // Fallback to prevent drawing errors
+
+        // Safety check: Ensure bgScaledWidth is a positive number. Fallback if not.
+        if (!(bgScaledWidth > 0)) { // Checks for NaN, 0, negative
+             console.error("[checkStartGame] Invalid bgScaledWidth calculated, resetting to canvas.width.");
+             bgScaledWidth = canvas.width;
         }
-       // >>> END OF CALCULATION CHECK <<<
+        // --- End Calculate Background Scaled Width ---
 
         console.log("[checkStartGame] Calling resetGame...");
-        resetGame();
+        resetGame(); // Initialize game variables
+
         console.log("[checkStartGame] Calling gameLoop to start...");
-        gameLoop();
-        console.log("[checkStartGame] gameLoop called.");
+        // Use try...catch just in case gameLoop itself throws an immediate error on first call
+        try {
+             gameLoop(); // Start the main game loop
+             console.log("[checkStartGame] gameLoop successfully called.");
+        } catch (e) {
+            console.error("[checkStartGame] Error starting gameLoop:", e);
+        }
+
+    } else {
+        // Optional: Log which assets are still pending if the check fails
+        // console.log(`[checkStartGame] Waiting for assets... B1=${birdImgLoaded}, B2=${birdImgFlapLoaded}, PT=${pipeTopImgLoaded}, PB=${pipeBottomImgLoaded}, BG=${backgroundImgLoaded}`);
     }
-}
+} // --- End of checkStartGame function ---
+
 // --- Image Load Handlers --- (Remain the same)
 birdImg.onload = () => { console.log("Bird image 1 loaded."); birdImgLoaded = true; checkStartGame(); };
 birdImgFlap.onload = () => { console.log("Bird image 2 (flap) loaded."); birdImgFlapLoaded = true; checkStartGame(); };
