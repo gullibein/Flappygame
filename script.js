@@ -229,40 +229,67 @@ function update() {
 }
 
 function draw() {
-    console.log("[draw] Entered draw function. Frame:", frame); // Log entry
-
     // --- Draw Background ---
     if (backgroundImg.complete && bgScaledWidth > 0) {
-        console.log(`Drawing background. bgX: ${bgX.toFixed(1)}, bgScaledWidth: ${bgScaledWidth.toFixed(1)}, canvas.height: ${canvas.height}`); // Log parameters
-
-        // Add a try...catch around drawImage just in case
-        try {
-            // Draw the two background images for scrolling
-            ctx.drawImage(backgroundImg, bgX, 0, bgScaledWidth, canvas.height);
-            ctx.drawImage(backgroundImg, bgX + bgScaledWidth, 0, bgScaledWidth, canvas.height);
-            console.log("Background drawImage calls completed."); // Confirm execution
-        } catch (e) {
-            console.error("Error during background drawImage:", e); // Catch specific drawImage errors
-            // Draw fallback color if drawImage fails
-            ctx.fillStyle = "red"; // Draw red if error occurs
-            ctx.fillRect(0, 0, canvas.width, canvas.height);
-        }
-
+        ctx.drawImage(backgroundImg, bgX, 0, bgScaledWidth, canvas.height);
+        ctx.drawImage(backgroundImg, bgX + bgScaledWidth, 0, bgScaledWidth, canvas.height);
     } else {
-        console.log("Background image not ready or scaled width is zero. Drawing fallback color."); // Log fallback reason
-        // Fallback background color if image not ready or width invalid
-        ctx.fillStyle = "#70c5ce"; // Fallback sky blue
-        ctx.fillRect(0, 0, canvas.width, canvas.height);
+        ctx.fillStyle = "#70c5ce"; ctx.fillRect(0, 0, canvas.width, canvas.height);
     }
 
-    // --- Everything else remains commented out ---
-    /*
     // --- Draw Pipes ---
-    for (let pipe of pipes) { ... }
-    // ... etc ...
-    */
+    for (let pipe of pipes) {
+        if (pipeTopImg.complete) { ctx.drawImage(pipeTopImg, pipe.x, pipe.y - pipeTopImg.height, pipeWidth, pipeTopImg.height); }
+        else { ctx.fillStyle = "#006400"; ctx.fillRect(pipe.x, 0, pipeWidth, pipe.y); }
+        if (pipeBottomImg.complete) { ctx.drawImage(pipeBottomImg, pipe.x, pipe.y + pipeGap, pipeWidth, pipeBottomImg.height); }
+        else { ctx.fillStyle = "#008000"; ctx.fillRect(pipe.x, pipe.y + pipeGap, pipeWidth, canvas.height - (pipe.y + pipeGap)); }
+    }
 
-} // End of draw function
+    // --- Define which bird image to use ---
+    let currentBirdImage = birdImg;
+    if (!birdImg.complete && birdImgFlap.complete) { currentBirdImage = birdImgFlap; }
+    if (isFlappingAnimation && birdImgFlap.complete) { currentBirdImage = birdImgFlap; }
+
+    // --- Draw Bird (with Rotation) ---
+    if (currentBirdImage && currentBirdImage.complete) {
+        ctx.save();
+        const birdCenterX = birdX + birdHalfWidth; const birdCenterY = birdY + birdHalfHeight;
+        ctx.translate(birdCenterX, birdCenterY); ctx.rotate(birdAngle);
+        ctx.drawImage(currentBirdImage, -birdHalfWidth, -birdHalfHeight, birdWidth, birdHeight);
+        ctx.restore();
+    } else {
+        ctx.fillStyle = 'yellow'; ctx.fillRect(birdX, birdY, birdWidth, birdHeight);
+    }
+
+    // --- Draw Score --- (Yellow, New Font)
+    ctx.textAlign = "center";
+    ctx.fillStyle = "#FFFF00";
+    ctx.font = "16px 'Press Start 2P'";
+    ctx.fillText(score, canvas.width / 2, 40);
+
+    // --- Draw Messages ---
+    if (gameState === 'start') {
+        // Style for start message
+        ctx.fillStyle = "#000000"; // Black text
+        ctx.font = "14px 'Press Start 2P'";
+        ctx.fillText("Ýtið til að byrja", canvas.width / 2, canvas.height / 2 - 20); // Icelandic
+
+    } else if (gameState === 'gameOver') {
+        // Style for "Game Over!" text (Red, New Font)
+        ctx.fillStyle = "#FF0000"; // Red color
+        ctx.font = "20px 'Press Start 2P'";
+        ctx.fillText("Búið spil!", canvas.width / 2, canvas.height / 2 - 40); // Icelandic
+
+        // Reset styles for score/retry text
+        ctx.fillStyle = "#000000"; // Black text
+        ctx.font = "14px 'Press Start 2P'";
+        // Final score
+        ctx.fillText(score+" stig", canvas.width / 2, canvas.height / 2 + 0); // Icelandic
+        // High Score
+        ctx.fillText(`Besta tilraun: ${highScore}`, canvas.width / 2, canvas.height / 2 + 25); // Icelandic
+    }
+    ctx.textAlign = "start"; // Reset alignment
+}
 
 // The ACTUAL gameLoop function
 function gameLoop() {
