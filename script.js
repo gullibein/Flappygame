@@ -313,6 +313,42 @@ draw(); // Initial draw while images load
 
 // --- Scaling Logic --- (Remains the same)
 const gameWidth = 320; const gameHeight = 480;
-function resizeGame() { /* ... */ }
+function resizeGame() {
+    const canvas = document.getElementById('gameCanvas');
+    // ... (null check for canvas is good practice)
+    if (!canvas) {
+        console.error("!!! Canvas element not found for resizing!");
+        return;
+    }
+
+    const windowWidth = window.innerWidth;
+    const windowHeight = window.innerHeight;
+    const windowRatio = windowWidth / windowHeight;
+    // Make sure gameWidth and gameHeight are accessible here (should be global)
+    const gameRatio = gameWidth / gameHeight;
+
+    let newWidth = gameWidth;
+    let newHeight = gameHeight;
+
+    if (windowRatio > gameRatio) {
+        newHeight = windowHeight;
+        newWidth = newHeight * gameRatio;
+    } else {
+        newWidth = windowWidth;
+        newHeight = newWidth / gameRatio;
+    }
+
+    canvas.style.width = `${newWidth}px`;
+    canvas.style.height = `${newHeight}px`;
+
+    // >>> THIS IS THE CRITICAL LINE <<<
+    canvas.style.visibility = 'visible';
+
+    console.log(`Resized canvas style to: ${newWidth.toFixed(0)}px x ${newHeight.toFixed(0)}px. Visibility set to visible.`); // Added visibility confirmation
+}
+
+// Make sure these listeners are active at the end of the script
+window.addEventListener('load', resizeGame);
+window.addEventListener('resize', resizeGame);
 window.addEventListener('load', resizeGame);
 window.addEventListener('resize', resizeGame);
