@@ -18,6 +18,7 @@ const pipeGap = 100;
 const pipeSpeed = 2;
 const pipeFrequency = 90;
 let gameState = 'start';
+let canRestart = true; 
 
 // --- Bird Rotation Variables ---
 let birdAngle = 0;
@@ -99,22 +100,8 @@ function checkStartGame() {
         }
         // --- End Calculate Background Scaled Width ---
 
-        console.log("[checkStartGame] Calling resetGame...");
         resetGame(); // Initialize game variables
 
-        console.log("[checkStartGame] Calling gameLoop to start...");
-        // Use try...catch just in case gameLoop itself throws an immediate error on first call
-        try {
-             gameLoop(); // Start the main game loop
-             console.log("[checkStartGame] gameLoop successfully called.");
-        } catch (e) {
-            console.error("[checkStartGame] Error starting gameLoop:", e);
-        }
-
-    } else {
-        // Optional: Log which assets are still pending if the check fails
-        // console.log(`[checkStartGame] Waiting for assets... B1=${birdImgLoaded}, B2=${birdImgFlapLoaded}, PT=${pipeTopImgLoaded}, PB=${pipeBottomImgLoaded}, BG=${backgroundImgLoaded}`);
-    }
 } // --- End of checkStartGame function ---
 
 // --- Image Load Handlers --- (Remain the same)
