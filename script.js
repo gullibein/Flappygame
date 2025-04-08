@@ -1,40 +1,54 @@
-// script.js - Corrected Braces for Restart Delay Logic
+// script.js - Flappy Bird Clone with Point-Based Collision & Optimizations
 
+// --- Canvas Setup ---
 const canvas = document.getElementById('gameCanvas');
-const ctx = canvas.getContext('2d', { alpha: false });
+const ctx = canvas.getContext('2d', { alpha: false }); // Disable alpha for potential performance gain
 
-// Game Variables
+// --- Game Constants & Variables ---
+const gameWidth = 320;  // Internal game resolution width
+const gameHeight = 480; // Internal game resolution height
+
 let birdX = 50;
-let birdY = canvas.height / 2 - 15;
-let birdVelY = 0;
-const gravity = 0.25;
-const flapStrength = -5;
+let birdY = canvas.height / 2 - 15; // Initial Y position
+let birdVelY = 0;           // Bird's vertical velocity
+const gravity = 0.25;       // Downward acceleration
+const flapStrength = -5;    // Upward velocity impulse on flap
+
 let score = 0;
 let highScore = 0;
-let frame = 0;
-let pipes = [];
-const pipeWidth = 52;
-const pipeGap = 100;
-const pipeSpeed = 2;
-const pipeFrequency = 90;
-let gameState = 'start';
-let canRestart = true; // Flag to control restart availability
+let frame = 0;              // Frame counter for game logic timing
+let pipes = [];             // Array to hold pipe objects
+const pipeWidth = 52;       // Visual width of pipes
+const pipeHalfWidth = pipeWidth / 2; // Pre-calculated
+const pipeGap = 100;        // Vertical gap between pipes
+const pipeSpeed = 2;        // How fast pipes move left
+const pipeFrequency = 90;   // Frames between new pipe spawns (Increase for better performance/easier game)
+
+let gameState = 'start';    // 'start', 'playing', 'gameOver'
+let canRestart = true;      // Flag to control restart availability after game over
 
 // --- Bird Rotation Variables ---
-let birdAngle = 0;
-const maxUpAngle = -Math.PI / 6;
-const maxDownAngle = Math.PI / 6;
-const rotationLerpFactor = 0.1;
+let birdAngle = 0;          // Current bird angle in radians
+const maxUpAngle = -Math.PI / 6; // Max upward rotation (~ -30 degrees)
+const maxDownAngle = Math.PI / 6;  // Max downward rotation (~ +30 degrees)
+const rotationLerpFactor = 0.1; // Smoothing factor for rotation (Lower = slower/smoother)
 
 // --- Load Bird Images ---
 const birdImg = new Image(); birdImg.src = 'bird.png';
 const birdImgFlap = new Image(); birdImgFlap.src = 'bird2.png';
-let birdWidth = 34; let birdHeight = 24;
-const birdHalfWidth = birdWidth / 2;
-const birdHalfHeight = birdHeight / 2;
+let birdWidth = 34;         // Bird visual width
+let birdHeight = 24;        // Bird visual height
+const birdHalfWidth = birdWidth / 2;   // Pre-calculated
+const birdHalfHeight = birdHeight / 2; // Pre-calculated
+
+// --- Bird Collision Point Offsets ---
+// How far inset from visual edges the collision points are (Larger = more forgiving/"rounded")
+const collisionInsetX = 4;
+const collisionInsetY = 4;
 
 // --- Flap Animation State ---
-let isFlappingAnimation = false; let flapAnimationTimer = null;
+let isFlappingAnimation = false;
+let flapAnimationTimer = null;
 
 // --- Load Pipe Images ---
 const pipeTopImg = new Image(); pipeTopImg.src = 'pipe2.png';
@@ -42,11 +56,15 @@ const pipeBottomImg = new Image(); pipeBottomImg.src = 'pipe.png';
 
 // --- Load Background Image ---
 const backgroundImg = new Image(); backgroundImg.src = 'background.png';
-let bgX = 0; const bgScrollSpeed = 0.5; let bgScaledWidth = canvas.width;
+let bgX = 0;                // Current X position for background scrolling
+const bgScrollSpeed = 0.5;  // Background scroll speed
+let bgScaledWidth = canvas.width; // Calculated background width for correct aspect ratio
 
 // --- Load Sounds using Howler.js ---
+// NOTE: Ensure Howler.js library is included in index.html before this script
+//       (e.g., via CDN or local file)
 const flapSound = new Howl({
-  src: ['flap.mp3', 'flap.wav'], preload: true,
+  src: ['flap.mp3', 'flap.wav'], preload: true, // Provide optimized format first
   onloaderror: (id, err) => console.error("Failed to load flap sound:", err),
   onplayerror: (id, err) => console.warn("Could not play flap sound:", err)
 });
@@ -62,270 +80,318 @@ const hitSound = new Howl({
 });
 // --- End Howler Sounds ---
 
-
 // --- Image Loading Check ---
+// Flags to track loading status
 let birdImgLoaded = false, birdImgFlapLoaded = false, pipeTopImgLoaded = false, pipeBottomImgLoaded = false, backgroundImgLoaded = false;
+
+// Function to check if all assets are loaded and start the game
 function checkStartGame() {
+    // Check if all flags are true
     if (birdImgLoaded && birdImgFlapLoaded && pipeTopImgLoaded && pipeBottomImgLoaded && backgroundImgLoaded) {
         console.log("All game images loaded successfully!");
+
+        // Calculate background width based on aspect ratio (only after image loaded)
         if (backgroundImg.naturalHeight > 0) {
             const aspectRatio = backgroundImg.naturalWidth / backgroundImg.naturalHeight;
             bgScaledWidth = canvas.height * aspectRatio;
-        } else { bgScaledWidth = backgroundImg.naturalWidth || canvas.width; }
+        } else {
+            // Fallback if image dimensions not available
+            bgScaledWidth = backgroundImg.naturalWidth || canvas.width;
+        }
+        // Ensure scaled width is at least the canvas width
         if (bgScaledWidth < canvas.width) { bgScaledWidth = canvas.width; }
-        resetGame();
-        gameLoop();
+
+        resetGame(); // Initialize game state
+        gameLoop();  // Start the main game loop
     }
 }
 
-// --- Image Load Handlers ---
+// --- Image Load Handlers --- (Trigger checkStartGame)
 birdImg.onload = () => { console.log("Bird image 1 loaded."); birdImgLoaded = true; checkStartGame(); };
 birdImgFlap.onload = () => { console.log("Bird image 2 (flap) loaded."); birdImgFlapLoaded = true; checkStartGame(); };
 pipeTopImg.onload = () => { console.log("Pipe Top image loaded."); pipeTopImgLoaded = true; checkStartGame(); };
 pipeBottomImg.onload = () => { console.log("Pipe Bottom image loaded."); pipeBottomImgLoaded = true; checkStartGame(); };
 backgroundImg.onload = () => { console.log("Background image loaded."); backgroundImgLoaded = true; checkStartGame(); };
+// Error Handlers (Mark as loaded to allow game start even if one fails, using fallbacks)
 birdImg.onerror = () => { console.error("Failed to load bird image 1!"); birdImgLoaded = true; checkStartGame(); }
 birdImgFlap.onerror = () => { console.error("Failed to load bird image 2 (flap)!"); birdImgFlapLoaded = true; checkStartGame(); }
 pipeTopImg.onerror = () => { console.error("Failed to load Pipe Top image!"); pipeTopImgLoaded = true; checkStartGame(); }
 pipeBottomImg.onerror = () => { console.error("Failed to load Pipe Bottom image!"); pipeBottomImgLoaded = true; checkStartGame(); }
 backgroundImg.onerror = () => { console.error("Failed to load Background image!"); backgroundImgLoaded = true; checkStartGame(); }
 
-
 // --- Game Functions ---
 
 function flap() {
+    // Determine if a flap action is allowed based on game state and restart cooldown
     const canFlapNow = gameState === 'playing' || gameState === 'start' || (gameState === 'gameOver' && canRestart);
-    console.log(`[flap] Called. Current state: ${gameState}, canRestart: ${canRestart}, canFlapNow: ${canFlapNow}`);
+    console.log(`[flap] Called. State: ${gameState}, canRestart: ${canRestart}, canFlapNow: ${canFlapNow}`); // Debug log
 
     if (canFlapNow) {
+        // If starting or restarting, reset necessary variables
         if (gameState === 'start' || gameState === 'gameOver') {
             console.log(`[flap] Resetting from ${gameState}...`);
-            resetGame();
-            gameState = 'playing';
+            resetGame();        // Reset game variables
+            gameState = 'playing'; // Set state to playing
             console.log(`[flap] State set to: ${gameState}`);
         }
+
+        // Apply flap physics
         birdVelY = flapStrength;
+
+        // Trigger flap animation visuals
         isFlappingAnimation = true;
-        if (flapAnimationTimer) clearTimeout(flapAnimationTimer);
-        flapAnimationTimer = setTimeout(() => { isFlappingAnimation = false; }, 500);
+        if (flapAnimationTimer) clearTimeout(flapAnimationTimer); // Clear previous timer if any
+        flapAnimationTimer = setTimeout(() => { isFlappingAnimation = false; }, 500); // Reset animation after 0.5s
+
+        // Play flap sound
         flapSound.play();
+
     } else {
-        console.log(`[flap] Flap ignored. gameState: ${gameState}, canRestart: ${canRestart}`);
+        // Log why flap was ignored (useful for debugging restart delay)
+        console.log(`[flap] Flap ignored. State: ${gameState}, canRestart: ${canRestart}`);
     }
-} // <<< flap function ENDS HERE
+}
 
 function resetGame() {
-    birdX = 50;
-    birdY = canvas.height / 2 - birdHeight / 2;
-    birdVelY = 0;
-    pipes = [];
-    score = 0;
-    // highScore is intentionally NOT reset here
-    frame = 0;
-    bgX = 0;
-    isFlappingAnimation = false;
-    if (flapAnimationTimer) { clearTimeout(flapAnimationTimer); flapAnimationTimer = null; }
-    birdAngle = 0;
-    gameState = 'start';
-    canRestart = true; // Make sure restart is enabled
-} // <<< resetGame function ENDS HERE
+    console.log("[resetGame] Resetting game variables."); // Debug log
+    birdX = 50;                     // Reset bird position
+    birdY = canvas.height / 2 - birdHalfHeight; // Center vertically based on half height
+    birdVelY = 0;                   // Reset velocity
+    pipes = [];                     // Clear pipes array
+    score = 0;                      // Reset score
+    // highScore is intentionally NOT reset
+    frame = 0;                      // Reset frame counter
+    bgX = 0;                        // Reset background scroll position
+    isFlappingAnimation = false;    // Reset flap animation visual state
+    if (flapAnimationTimer) { clearTimeout(flapAnimationTimer); flapAnimationTimer = null; } // Clear animation timer
+    birdAngle = 0;                  // Reset bird rotation
+    gameState = 'start';            // Set initial game state
+    canRestart = true;              // Ensure restart is enabled
+}
 
 function update() {
-    // Log state at the beginning (optional)
-    // console.log(`[update] Entered. gameState = ${gameState}, Frame = ${frame}`);
-
-    // --- Early exit if not playing ---
+    // --- Early exit if not in 'playing' state ---
     if (gameState !== 'playing') {
-        // console.log(`[update] Returning because gameState is '${gameState}'`);
-        return; // Stop all updates if not playing
+        return; // Stop all game logic updates (physics, pipes, score)
     }
 
     // --- If playing, proceed with updates ---
-    // console.log("[update] gameState IS 'playing'. Proceeding with updates.");
 
     // Background Scrolling
     if (backgroundImg.complete && bgScaledWidth > 0) {
          bgX -= bgScrollSpeed;
-         if (bgX <= -bgScaledWidth) { bgX += bgScaledWidth; }
+         if (bgX <= -bgScaledWidth) { bgX += bgScaledWidth; } // Loop background
     }
 
     // Bird Physics
-    birdVelY += gravity;
-    birdY += birdVelY;
+    birdVelY += gravity; // Apply gravity
+    birdY += birdVelY;   // Update vertical position
 
     // Bird Rotation Logic
     let targetAngle; const velocityThreshold = 0.5;
-    if (birdVelY < 0) { targetAngle = maxUpAngle; }
-    else if (birdVelY > velocityThreshold) { targetAngle = maxDownAngle; }
-    else { targetAngle = 0; }
-    birdAngle += (targetAngle - birdAngle) * rotationLerpFactor;
+    if (birdVelY < 0) { targetAngle = maxUpAngle; } // Going up
+    else if (birdVelY > velocityThreshold) { targetAngle = maxDownAngle; } // Going down
+    else { targetAngle = 0; } // Near peak
+    birdAngle += (targetAngle - birdAngle) * rotationLerpFactor; // Smoothly rotate
 
-    // --- Collision Detection: Ground & Ceiling ---
-    if (birdY + birdHeight > canvas.height || birdY < 0) {
-        // Check if game is not already over to prevent multiple triggers
-        if (gameState !== 'gameOver') { // Check start
-            if(birdY < 0) birdY = 0; // Optional clamping
-            if(birdY + birdHeight > canvas.height) birdY = canvas.height - birdHeight; // Optional clamping
-            gameState = 'gameOver';
-            canRestart = false; // Disable restart
+    // --- Calculate Rotated Collision Points ---
+    const birdCenterX = birdX + birdHalfWidth;
+    const birdCenterY = birdY + birdHalfHeight;
+    const cosA = Math.cos(birdAngle);
+    const sinA = Math.sin(birdAngle);
+    // Points relative to bird center (inset for "rounded" feel)
+    const beakRelX = birdHalfWidth - collisionInsetX; const beakRelY = 0;
+    const topRelX = 0; const topRelY = -birdHalfHeight + collisionInsetY;
+    const bottomRelX = 0; const bottomRelY = birdHalfHeight - collisionInsetY;
+    // Calculate world coordinates of points
+    const beakPoint = { x: birdCenterX + (beakRelX * cosA - beakRelY * sinA), y: birdCenterY + (beakRelX * sinA + beakRelY * cosA) };
+    const topPoint = { x: birdCenterX + (topRelX * cosA - topRelY * sinA), y: birdCenterY + (topRelX * sinA + topRelY * cosA) };
+    const bottomPoint = { x: birdCenterX + (bottomRelX * cosA - bottomRelY * sinA), y: birdCenterY + (bottomRelX * sinA + bottomRelY * cosA) };
+    const collisionPoints = [beakPoint, topPoint, bottomPoint]; // Array of points to check
 
-            if (score > highScore) { highScore = score; console.log("New High Score:", highScore); }
-
+    // --- Collision Detection: Ground & Ceiling (Point-based) ---
+    if (bottomPoint.y > canvas.height || topPoint.y < 0) {
+        if (gameState !== 'gameOver') { // Check if not already game over
+            gameState = 'gameOver'; canRestart = false; // Set state, disable restart
+            if (score > highScore) { highScore = score; console.log("New High Score:", highScore); } // Update high score
             hitSound.play(); // Play hit sound
+            // Set timer to re-enable restart after delay
+            setTimeout(() => { canRestart = true; console.log("Restart enabled after delay."); }, 500);
+        }
+        // No return needed here - update loop will exit next frame based on gameState
+    }
 
-            // Set timer to re-enable restart
-            setTimeout(() => {
-                canRestart = true;
-                console.log("Restart enabled after delay.");
-            }, 500);
-        } // Check end
-        // No return here needed, next frame's update will return early
-    } // Outer collision check end
-
-    // Pipe Management
+    // --- Pipe Management ---
+    // Add new pipes periodically
     if (frame % pipeFrequency === 0) {
-        let pipeY = Math.random() * (canvas.height - pipeGap - 150) + 75;
+        let pipeY = Math.random() * (canvas.height - pipeGap - 150) + 75; // Random gap position
         pipes.push({ x: canvas.width, y: pipeY, passed: false });
     }
 
-    // Move and Check Pipes
-    for (let i = pipes.length - 1; i >= 0; i--) {
-        pipes[i].x -= pipeSpeed;
-        const pipeTopY = pipes[i].y;
-        const pipeBottomY = pipes[i].y + pipeGap;
+    // --- Move and Check Pipes ---
+    for (let i = pipes.length - 1; i >= 0; i--) { // Loop backwards for safe removal
+        const pipe = pipes[i];
+        pipe.x -= pipeSpeed; // Move pipe left
 
-        // --- Collision with Pipes ---
-        const collisionBoxTopY = birdY + 2;
-        if (birdX < pipes[i].x + pipeWidth && birdX + birdWidth > pipes[i].x &&
-            (collisionBoxTopY < pipeTopY || birdY + birdHeight > pipeBottomY)) {
+        // Define pipe boundaries for collision checks
+        const pipeTopY = pipe.y;           // Top of the gap
+        const pipeBottomY = pipe.y + pipeGap; // Bottom of the gap
+        const pipeLeftX = pipe.x;
+        const pipeRightX = pipe.x + pipeWidth;
 
-            // Check if game is not already over
-            if (gameState !== 'gameOver') { // Check start
-                 gameState = 'gameOver';
-                 canRestart = false; // Disable restart
+        // --- Collision with Pipes (Point-based) ---
+        let collisionDetected = false;
+        for (const point of collisionPoints) {
+            // Is the point horizontally within the pipe?
+            if (point.x > pipeLeftX && point.x < pipeRightX) {
+                // Is the point vertically outside the gap (hitting top or bottom part)?
+                if (point.y < pipeTopY || point.y > pipeBottomY) {
+                    collisionDetected = true;
+                    break; // One point hit is enough
+                }
+            }
+        }
 
-                 if (score > highScore) { highScore = score; console.log("New High Score:", highScore); }
-
+        if (collisionDetected) {
+            if (gameState !== 'gameOver') { // Check if not already game over
+                 gameState = 'gameOver'; canRestart = false; // Set state, disable restart
+                 if (score > highScore) { highScore = score; console.log("New High Score:", highScore); } // Update high score
                  hitSound.play(); // Play hit sound
+                 // Set timer to re-enable restart after delay
+                 setTimeout(() => { canRestart = true; console.log("Restart enabled after delay."); }, 500);
+            }
+            // No return needed here
+        }
 
-                 // Set timer to re-enable restart
-                 setTimeout(() => {
-                    canRestart = true;
-                    console.log("Restart enabled after delay.");
-                 }, 500);
-            } // Check end
-            // No return here
-        } // Outer collision check end
+        // --- Score Update --- (Only check if game is still playing)
+        if (gameState === 'playing') {
+             const birdCenterXScore = birdX + birdHalfWidth; // Use bird's visual center
+             const pipeCenterX = pipe.x + pipeHalfWidth;    // Use pipe's visual center
 
-        // Score Update (only check if game is still playing)
-        if (gameState === 'playing') { // Add extra check here
-             const birdCenterX = birdX + birdHalfWidth;
-             const pipeHalfWidth = pipeWidth / 2;
-             const pipeCenterX = pipes[i].x + pipeHalfWidth;
-
-             if (birdCenterX >= pipeCenterX && !pipes[i].passed) {
+             // Check if bird center has passed pipe center and score not yet awarded
+             if (birdCenterXScore >= pipeCenterX && !pipe.passed) {
                  score++;
-                 pipes[i].passed = true;
-                 scoreSound.play();
+                 pipe.passed = true; // Mark as passed
+                 scoreSound.play();  // Play score sound
              }
-        } // End score check 'playing' condition
+        }
 
-        // Remove off-screen pipes
-        if (pipes[i].x + pipeWidth < 0) {
-            pipes.splice(i, 1);
+        // --- Remove off-screen pipes ---
+        if (pipeRightX < 0) {
+            pipes.splice(i, 1); // Remove pipe from array
         }
     } // End pipe loop
 
-    // Only increment frame if playing
-    frame++;
+    // --- Increment Frame Counter --- (Only if still playing)
+    if (gameState === 'playing') {
+        frame++;
+    }
 
-} // <<< update function ENDS HERE
+} // --- End of update function ---
 
 function draw() {
     // --- Draw Background ---
     if (backgroundImg.complete && bgScaledWidth > 0) {
         ctx.drawImage(backgroundImg, bgX, 0, bgScaledWidth, canvas.height);
         ctx.drawImage(backgroundImg, bgX + bgScaledWidth, 0, bgScaledWidth, canvas.height);
-    } else { ctx.fillStyle = "#70c5ce"; ctx.fillRect(0, 0, canvas.width, canvas.height); }
+    } else { ctx.fillStyle = "#70c5ce"; ctx.fillRect(0, 0, canvas.width, canvas.height); } // Fallback
 
     // --- Draw Pipes ---
     for (let pipe of pipes) {
         if (pipeTopImg.complete) { ctx.drawImage(pipeTopImg, pipe.x, pipe.y - pipeTopImg.height, pipeWidth, pipeTopImg.height); }
-        else { ctx.fillStyle = "#006400"; ctx.fillRect(pipe.x, 0, pipeWidth, pipe.y); }
+        else { ctx.fillStyle = "#006400"; ctx.fillRect(pipe.x, 0, pipeWidth, pipe.y); } // Fallback
         if (pipeBottomImg.complete) { ctx.drawImage(pipeBottomImg, pipe.x, pipe.y + pipeGap, pipeWidth, pipeBottomImg.height); }
-        else { ctx.fillStyle = "#008000"; ctx.fillRect(pipe.x, pipe.y + pipeGap, pipeWidth, canvas.height - (pipe.y + pipeGap)); }
+        else { ctx.fillStyle = "#008000"; ctx.fillRect(pipe.x, pipe.y + pipeGap, pipeWidth, canvas.height - (pipe.y + pipeGap)); } // Fallback
     }
 
     // --- Define which bird image to use ---
-    let currentBirdImage = birdImg;
-    if (!birdImg.complete && birdImgFlap.complete) { currentBirdImage = birdImgFlap; }
-    if (isFlappingAnimation && birdImgFlap.complete) { currentBirdImage = birdImgFlap; }
+    let currentBirdImage = birdImg; // Default
+    if (!birdImg.complete && birdImgFlap.complete) { currentBirdImage = birdImgFlap; } // Fallback if needed
+    if (isFlappingAnimation && birdImgFlap.complete) { currentBirdImage = birdImgFlap; } // Override for flap
 
     // --- Draw Bird (with Rotation) ---
     if (currentBirdImage && currentBirdImage.complete) {
-        ctx.save();
-        const birdCenterX = birdX + birdHalfWidth; const birdCenterY = birdY + birdHalfHeight;
-        ctx.translate(birdCenterX, birdCenterY); ctx.rotate(birdAngle);
+        ctx.save(); // Save context state
+        const birdCenterX = birdX + birdHalfWidth;
+        const birdCenterY = birdY + birdHalfHeight;
+        ctx.translate(birdCenterX, birdCenterY); // Move origin to bird center
+        ctx.rotate(birdAngle); // Rotate context
+        // Draw bird centered on the transformed origin
         ctx.drawImage(currentBirdImage, -birdHalfWidth, -birdHalfHeight, birdWidth, birdHeight);
-        ctx.restore();
-    } else { ctx.fillStyle = 'yellow'; ctx.fillRect(birdX, birdY, birdWidth, birdHeight); }
+        ctx.restore(); // Restore context state
+    } else { // Fallback if image not ready
+        ctx.fillStyle = 'yellow'; ctx.fillRect(birdX, birdY, birdWidth, birdHeight);
+    }
 
-    // --- Draw Score ---
+    // --- Draw Score --- (Yellow, Pixel Font)
     ctx.textAlign = "center";
     ctx.fillStyle = "#FFFF00";
     ctx.font = "16px 'Press Start 2P'";
-    ctx.fillText(score, canvas.width / 2, 40);
+    ctx.fillText(score, canvas.width / 2, 40); // NOTE: No strokeText for performance
 
     // --- Draw Messages ---
     if (gameState === 'start') {
         ctx.fillStyle = "#000000"; // Black text
         ctx.font = "14px 'Press Start 2P'";
         ctx.fillText("Ýtið til að byrja", canvas.width / 2, canvas.height / 2 - 20);
+        // NOTE: No strokeText
     } else if (gameState === 'gameOver') {
-        ctx.fillStyle = "#FF0000"; // Red color
+        // "Game Over!" text (Red, Pixel Font)
+        ctx.fillStyle = "#FF0000";
         ctx.font = "20px 'Press Start 2P'";
         ctx.fillText("Búið spil!", canvas.width / 2, canvas.height / 2 - 40);
+        // NOTE: No strokeText
 
-        ctx.fillStyle = "#000000"; // Black text
+        // Score/Retry text (Black, Pixel Font)
+        ctx.fillStyle = "#000000";
         ctx.font = "14px 'Press Start 2P'";
         ctx.fillText(score+" stig", canvas.width / 2, canvas.height / 2 + 0);
         ctx.fillText(`Besta tilraun: ${highScore}`, canvas.width / 2, canvas.height / 2 + 25);
         ctx.fillText("Click or Space to Retry", canvas.width / 2, canvas.height / 2 + 55);
+         // NOTE: No strokeText
     }
     ctx.textAlign = "start"; // Reset alignment
-} // <<< draw function ENDS HERE
 
+} // --- End of draw function ---
+
+// --- Main Game Loop ---
 function gameLoop() {
-    update();
-    draw();
-    requestAnimationFrame(gameLoop);
-} // <<< gameLoop function ENDS HERE
+    update(); // Update game state
+    draw();   // Render the current state
+    requestAnimationFrame(gameLoop); // Schedule the next frame
+}
 
 // --- Event Listeners ---
 window.addEventListener('keydown', function(e) { if (e.code === 'Space') { e.preventDefault(); flap(); } });
 canvas.addEventListener('mousedown', flap);
-canvas.addEventListener('touchstart', function(e) { e.preventDefault(); flap(); });
+// Use passive: false for touchstart if preventing default scroll is critical
+canvas.addEventListener('touchstart', function(e) { e.preventDefault(); flap(); }, { passive: false });
 
-// --- Start Game ---
-resetGame();
-draw(); // Initial draw
+// --- Initial Setup ---
+resetGame(); // Set initial game state variables
+draw();      // Draw the initial frame (likely the 'start' screen)
 
-// --- Scaling Logic ---
-const gameWidth = 320; const gameHeight = 480;
+// --- Screen Resizing Logic ---
 function resizeGame() {
-    const canvas = document.getElementById('gameCanvas');
+    const canvas = document.getElementById('gameCanvas'); // Get canvas element again
     const windowWidth = window.innerWidth;
     const windowHeight = window.innerHeight;
     const windowRatio = windowWidth / windowHeight;
-    const gameRatio = gameWidth / gameHeight;
+    const gameRatio = gameWidth / gameHeight; // Use defined constants
     let newWidth = gameWidth; let newHeight = gameHeight;
+
+    // Calculate new dimensions based on aspect ratio fit
     if (windowRatio > gameRatio) { newHeight = windowHeight; newWidth = newHeight * gameRatio; }
     else { newWidth = windowWidth; newHeight = newWidth / gameRatio; }
-    canvas.style.width = `${newWidth}px`; canvas.style.height = `${newHeight}px`;
+
+    // Apply visual scaling styles
+    canvas.style.width = `${newWidth}px`;
+    canvas.style.height = `${newHeight}px`;
+    // Ensure canvas is visible after sizing
     canvas.style.visibility = 'visible';
-    // console.log(`Resized canvas style to: ${newWidth.toFixed(0)} x ${newHeight.toFixed(0)}`);
-} // <<< resizeGame function ENDS HERE
+}
+// Initial resize on load and subsequent resize events
 window.addEventListener('load', resizeGame);
 window.addEventListener('resize', resizeGame);
 
-// <<< MAKE SURE THERE ARE NO EXTRA CHARACTERS AFTER THIS LINE >>>
+// --- End of Script ---
