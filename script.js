@@ -121,9 +121,12 @@ backgroundImg.onerror = () => { console.error("Failed to load Background image!"
 
 // The ACTUAL flap function where the sound should be played
 function flap() {
-    const canFlap = gameState === 'playing' || gameState === 'start' || gameState === 'gameOver';
-    if (canFlap) {
-        if (gameState === 'start' || gameState === 'gameOver') {
+    const canFlapNow = gameState === 'playing' || gameState === 'start' || (gameState === 'gameOver' && canRestart);
+    console.log(`[flap] Called. Current state: ${gameState}, canRestart: ${canRestart}, canFlapNow: ${canFlapNow}`);
+
+    if (canFlapNow) {
+        if (gameState === 'start' || gameState === 'gameOver') { // This condition is now safe
+            console.log(`[flap] Resetting from ${gameState}...`);
             resetGame();
             gameState = 'playing';
             console.log(`[flap] State set to: ${gameState}`);
@@ -132,9 +135,10 @@ function flap() {
         isFlappingAnimation = true;
         if (flapAnimationTimer) clearTimeout(flapAnimationTimer);
         flapAnimationTimer = setTimeout(() => { isFlappingAnimation = false; }, 500);
-
         // Play flap sound using Howler // CORRECT PLACEMENT
         flapSound.play();
+    }  else {
+        console.log(`[flap] Flap ignored. gameState: ${gameState}, canRestart: ${canRestart}`);
     }
 }
 
@@ -185,16 +189,23 @@ function update() {
 
     // Collision Detection: Ground & Ceiling
     if (birdY + birdHeight > canvas.height || birdY < 0) {
-        if(birdY < 0) birdY = 0;
-        if(birdY + birdHeight > canvas.height) birdY = canvas.height - birdHeight;
-        gameState = 'gameOver';
+        // --- ADD THIS CHECK vvv ---
+        if (gameState !== 'gameOver') { // Only process if game isn't already over
+            if(birdY < 0) birdY = 0; // Optional clamping
+            if(birdY + birdHeight > canvas.height) birdY = canvas.height - birdHeight; // Optional clamping
+            gameState = 'gameOver';
+            canRestart = false; // Disable restart
 
-        if (score > highScore) { highScore = score; console.log("New High Score:", highScore); }
+            if (score > highScore) { highScore = score; console.log("New High Score:", highScore); }
 
-        // Play hit sound using Howler // CORRECT PLACEMENT
-        hitSound.play();
+            hitSound.play(); // Play hit sound
 
-        return;
+            // Set timer to re-enable restart
+            setTimeout(() => {
+                canRestart = true;
+                console.log("Restart enabled after delay.");
+            }, 500); // 500 milliseconds = 0.5 seconds
+        }
     }
 
     // Pipe Management
@@ -212,14 +223,21 @@ function update() {
         const collisionBoxTopY = birdY + 2;
         if (birdX < pipes[i].x + pipeWidth && birdX + birdWidth > pipes[i].x &&
             (collisionBoxTopY < pipeTopY || birdY + birdHeight > pipeBottomY)) {
-            gameState = 'gameOver';
+           // --- ADD THIS CHECK vvv ---
+            if (gameState !== 'gameOver') { // Only process if game isn't already over
+                 gameState = 'gameOver';
+                 canRestart = false; // Disable restart
 
-            if (score > highScore) { highScore = score; console.log("New High Score:", highScore); }
+                 if (score > highScore) { highScore = score; console.log("New High Score:", highScore); }
 
-            // Play hit sound using Howler // CORRECT PLACEMENT
-            hitSound.play();
+                 hitSound.play(); // Play hit sound
 
-            return;
+                 // Set timer to re-enable restart
+                 setTimeout(() => {
+                    canRestart = true;
+                    console.log("Restart enabled after delay.");
+                 }, 500); // 500 milliseconds = 0.5 seconds
+            }
         }
 
         // Score Update
