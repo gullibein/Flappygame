@@ -347,7 +347,6 @@ function draw() {
         ctx.font = "14px 'Press Start 2P'";
         ctx.fillText(score+" stig", canvas.width / 2, canvas.height / 2 + 0);
         ctx.fillText(`Besta tilraun: ${highScore}`, canvas.width / 2, canvas.height / 2 + 25);
-        ctx.fillText("Click or Space to Retry", canvas.width / 2, canvas.height / 2 + 55);
          // NOTE: No strokeText
     }
     ctx.textAlign = "start"; // Reset alignment
